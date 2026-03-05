@@ -1,0 +1,129 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 89% 56%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 215 16% 94%;
+    --muted-foreground: 222 38% 25%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 90%;
+    --input: 214 32% 90%;
+    --ring: 222 89% 56%;
+    --radius: 12px;
+    --success: 142 71% 45%;
+    --success-foreground: 355 100% 97%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 33 53% 20%;
+    --info: 199 89% 48%;
+    --info-foreground: 210 40% 98%;
+    --chart-1: 222 89% 56%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 27 96% 61%;
+    --chart-4: 268 84% 58%;
+    --chart-5: 340 82% 60%;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 224 71% 4%;
+    --secondary: 215 27% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 21% 14%;
+    --muted-foreground: 217 11% 65%;
+    --accent: 210 28% 22%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 27% 16%;
+    --input: 215 27% 16%;
+    --ring: 217 91% 60%;
+    --radius: 12px;
+    --success: 141 75% 40%;
+    --success-foreground: 144 30% 97%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 33 53% 20%;
+    --info: 199 89% 48%;
+    --info-foreground: 210 40% 98%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 160 70% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 70% 60%;
+    --chart-5: 340 80% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08), transparent 25%),
+      radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.12), transparent 30%),
+      hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(59, 130, 246, 0.25);
+  }
+
+  /* Ensure overlays are hidden when closed - multiple selectors for maximum coverage */
+  [data-state="closed"][data-radix-dialog-overlay],
+  [data-radix-dialog-overlay][data-state="closed"],
+  [data-state="closed"][data-radix-dialog-content],
+  [data-radix-dialog-content][data-state="closed"],
+  /* Target by class patterns */
+  [data-state="closed"].fixed.inset-0,
+  [data-state="closed"][class*="fixed"][class*="inset-0"],
+  /* Universal selector for any closed overlay */
+  [data-state="closed"][class*="backdrop-blur"],
+  [data-state="closed"][class*="bg-black/40"] {
+    display: none !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  /* Nuclear option: Hide any element with backdrop-blur that's closed */
+  [class*="backdrop-blur"][data-state="closed"],
+  [class*="bg-black/40"][data-state="closed"] {
+    display: none !important;
+    pointer-events: none !important;
+  }
+}
