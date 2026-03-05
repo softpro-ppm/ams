@@ -126,7 +126,7 @@ function Brand() {
         />
       </div>
       <div className="leading-tight">
-        <div className="text-lg">SOFTPRO</div>
+        <div className="text-lg">SOFTPRO 1</div>
         <div className="text-xs text-slate-300">Finance Suite</div>
       </div>
     </Link>
