@@ -15,7 +15,7 @@ echo -e "${BLUE}=== SOFTPRO Finance - Frontend Deployment ===${NC}\n"
 # Configuration (Update these with your server details)
 SERVER_USER="u820431346"
 SERVER_HOST="us-imm-web1739.hstgr.io"
-SERVER_PATH="~/domains/softpromis.com/public_html/v2account/frontend/dist"
+SERVER_PATH="~/domains/softpromis.com/public_html/ams/frontend/dist"
 LOCAL_DIST="frontend/dist"
 
 # Check if dist folder exists
@@ -45,7 +45,7 @@ scp -r frontend/dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
 
 if [ $? -eq 0 ]; then
     echo -e "\n${GREEN}✓ Deployment successful!${NC}"
-    echo -e "${BLUE}Visit: https://v2account.softpromis.com${NC}"
+    echo -e "${BLUE}Visit: https://ams.softpromis.com${NC}"
     echo -e "\n${YELLOW}Note: Clear browser cache and service worker to see changes${NC}"
 else
     echo -e "\n${RED}✗ Deployment failed!${NC}"
