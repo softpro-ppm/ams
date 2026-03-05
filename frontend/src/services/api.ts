@@ -13,9 +13,12 @@ import type {
   PaginatedResponse,
 } from "@/types";
 
-// Auth
+// Auth - csrf-cookie: use same-origin /sanctum path when proxied (VITE_API_URL relative)
 export const authApi = {
   login: async (email: string, password: string, remember: boolean = false) => {
+    const apiUrl = import.meta.env.VITE_API_URL || "/api";
+    const csrfUrl = apiUrl.startsWith("/") ? "/sanctum/csrf-cookie" : `${apiUrl.replace(/\/api\/?$/, "")}/sanctum/csrf-cookie`;
+    await apiClient.get(csrfUrl, { baseURL: apiUrl.startsWith("/") ? "" : undefined });
     const { data } = await apiClient.post("/login", { email, password, remember });
     return data;
   },

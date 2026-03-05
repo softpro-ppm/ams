@@ -6,6 +6,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
