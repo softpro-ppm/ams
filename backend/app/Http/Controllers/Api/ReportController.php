@@ -48,19 +48,22 @@ class ReportController extends Controller
 
         $callback = function () use ($builder) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Date', 'Type', 'Amount', 'Project', 'Category', 'Subcategory', 'Description', 'Reference']);
+            fputcsv($handle, ['#', 'Date', 'Type', 'Amount', 'Project', 'Category', 'Subcategory', 'Reference']);
 
-            $builder->chunk(500, function ($rows) use ($handle) {
+            $sn = 0;
+            $builder->chunk(500, function ($rows) use ($handle, &$sn) {
                 foreach ($rows as $row) {
+                    $sn++;
+                    $date = $row->transaction_date ? Carbon::parse($row->transaction_date)->format('Y-m-d') : '';
                     fputcsv($handle, [
-                        $row->transaction_date,
+                        $sn,
+                        $date,
                         Str::ucfirst($row->type),
-                        number_format((float) $row->amount, 2),
-                        $row->project?->name,
-                        $row->category?->name,
-                        $row->subcategory?->name,
-                        $row->description,
-                        $row->reference,
+                        number_format((float) $row->amount, 2, '.', ''),
+                        $row->project?->name ?? '',
+                        $row->category?->name ?? '',
+                        $row->subcategory?->name ?? '',
+                        $row->reference ?? '',
                     ]);
                 }
             });
@@ -73,7 +76,7 @@ class ReportController extends Controller
     public function exportPdf(Request $request)
     {
         $builder = $this->baseQuery($request)->orderByDesc('transaction_date');
-        $transactions = $builder->limit(200)->get();
+        $transactions = $builder->get();
 
         $data = [
             'filters' => $this->filters($request),
@@ -84,7 +87,7 @@ class ReportController extends Controller
         ];
         $data['net'] = $data['income'] - $data['expense'];
 
-        $pdf = Pdf::loadView('reports.statement', $data)->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('reports.statement', $data)->setPaper('a4', 'landscape');
 
         return $pdf->download('softpro-report.pdf');
     }

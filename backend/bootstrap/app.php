@@ -19,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'ims.api_key' => \App\Http\Middleware\ValidateImsApiKey::class,
+            'sms.api_key' => \App\Http\Middleware\ValidateSmsApiKey::class,
+        ]);
         $middleware->prependToGroup('web', HandleCors::class);
 
         $middleware->appendToGroup('api', [

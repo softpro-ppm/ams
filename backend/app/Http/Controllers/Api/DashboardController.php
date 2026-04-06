@@ -49,17 +49,20 @@ class DashboardController extends Controller
         $expense = (float) $base->clone()->where('type', 'expense')->sum('amount');
         $net = $income - $expense;
 
-        // Calculate quarterly data (current quarter)
-        $quarterStart = now()->startOfQuarter()->startOfDay();
-        $quarterEnd = now()->endOfDay();
-        
+        // Quarterly KPIs: sum every row whose transaction_date falls in the current calendar
+        // quarter (start→end of quarter), including future-dated entries in that range.
+        $quarterStartDate = now()->startOfQuarter()->toDateString();
+        $quarterEndDate = now()->endOfQuarter()->toDateString();
+
         $quarterlyIncome = (float) Transaction::where('user_id', $userId)
-            ->whereBetween('transaction_date', [$quarterStart, $quarterEnd])
+            ->whereDate('transaction_date', '>=', $quarterStartDate)
+            ->whereDate('transaction_date', '<=', $quarterEndDate)
             ->where('type', 'income')
             ->sum('amount');
 
         $quarterlyExpense = (float) Transaction::where('user_id', $userId)
-            ->whereBetween('transaction_date', [$quarterStart, $quarterEnd])
+            ->whereDate('transaction_date', '>=', $quarterStartDate)
+            ->whereDate('transaction_date', '<=', $quarterEndDate)
             ->where('type', 'expense')
             ->sum('amount');
 

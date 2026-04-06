@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Download } from "lucide-react";
+import { X, Download, Share } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -14,14 +14,26 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+/** Detect iOS (iPhone/iPad Safari) - does not support beforeinstallprompt */
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOSDevice, setIsIOSDevice] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed
+    // Check if app is already installed (standalone mode)
     if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+      return;
+    }
+
+    // iOS: check legacy standalone flag (Safari when added to home screen)
+    if ((navigator as { standalone?: boolean }).standalone === true) {
       setIsInstalled(true);
       return;
     }
@@ -32,7 +44,16 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    // Listen for beforeinstallprompt event
+    const ios = isIOS();
+    setIsIOSDevice(ios);
+
+    if (ios) {
+      // iOS: Show prompt after short delay (Safari has no beforeinstallprompt)
+      const timer = setTimeout(() => setShowPrompt(true), 1500);
+      return () => clearTimeout(timer);
+    }
+
+    // Android/Chrome: Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -63,7 +84,6 @@ export function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    // Don't show again for this session
     sessionStorage.setItem("pwa-prompt-dismissed", "true");
   };
 
@@ -77,21 +97,34 @@ export function PWAInstallPrompt() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
+            {isIOSDevice ? <Share className="h-5 w-5" /> : <Download className="h-5 w-5" />}
             Install SOFTPRO Finance
           </DialogTitle>
-          <DialogDescription>
-            Install this app on your device for a better experience. It works offline and loads faster!
+          <DialogDescription asChild>
+            {isIOSDevice ? (
+              <div className="space-y-3 text-sm">
+                <p>Add this app to your Home Screen for quick access and a better experience.</p>
+                <ol className="list-decimal list-inside space-y-2 text-slate-300">
+                  <li>Tap the <strong>Share</strong> button (square with arrow) at the bottom of Safari</li>
+                  <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+                  <li>Tap <strong>Add</strong> in the top right</li>
+                </ol>
+              </div>
+            ) : (
+              <p>Install this app on your device for a better experience. It works offline and loads faster!</p>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-4">
-          <Button onClick={handleInstall} className="w-full">
-            <Download className="mr-2 h-4 w-4" />
-            Install App
-          </Button>
+          {!isIOSDevice && (
+            <Button onClick={handleInstall} className="w-full">
+              <Download className="mr-2 h-4 w-4" />
+              Install App
+            </Button>
+          )}
           <Button variant="outline" onClick={handleDismiss} className="w-full">
             <X className="mr-2 h-4 w-4" />
-            Not Now
+            {isIOSDevice ? "Got it" : "Not Now"}
           </Button>
         </div>
       </DialogContent>

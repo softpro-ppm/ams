@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BulkImportController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\IncomeFromImsController;
+use App\Http\Controllers\Api\IncomeFromSmsController;
 use App\Http\Controllers\Api\LoanController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ReportController;
@@ -13,6 +15,14 @@ use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+
+// IMS integration - API key auth (no Sanctum)
+Route::post('/income/from-ims', [IncomeFromImsController::class, 'store'])
+    ->middleware('ims.api_key');
+
+// SMS integration - API key auth (no Sanctum)
+Route::post('/income/from-sms', [IncomeFromSmsController::class, 'store'])
+    ->middleware('sms.api_key');
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

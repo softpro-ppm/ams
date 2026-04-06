@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'ims' => [
+        'api_key' => env('IMS_API_KEY'),
+    ],
+
+    'sms' => [
+        'api_key' => env('SMS_API_KEY'),
+    ],
+
 ];
