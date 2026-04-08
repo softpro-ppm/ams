@@ -18,7 +18,7 @@ class DashboardController extends Controller
 {
     public function summary(Request $request): DashboardSummaryResource
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         // Default to all time if no date filters provided, otherwise use the provided dates
         $hasDateFilter = $request->has('date_from') && $request->filled('date_from') 

@@ -30,7 +30,7 @@ class BulkImportController extends Controller
             'file' => 'required|file|mimes:xlsx,xls|max:10240', // 10MB max
         ]);
 
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
         $file = $request->file('file');
 
         try {
@@ -307,7 +307,7 @@ class BulkImportController extends Controller
             'file' => 'required|file|mimes:xlsx,xls|max:10240', // 10MB max
         ]);
 
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
         $file = $request->file('file');
 
         try {

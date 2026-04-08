@@ -13,7 +13,7 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Category::where('user_id', $request->user()->id)
+        $query = Category::where('user_id', $request->user()->bookOwnerId())
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')))
             ->when(! $request->boolean('include_inactive'), fn ($q) => $q->where('is_active', true))
             ->with(['subcategories' => fn ($q) => $q->orderBy('name')])
@@ -26,7 +26,7 @@ class CategoryController extends Controller
     {
         $category = Category::create([
             ...$request->validated(),
-            'user_id' => $request->user()->id,
+            'user_id' => $request->user()->bookOwnerId(),
         ]);
 
         return new CategoryResource($category);
@@ -68,6 +68,6 @@ class CategoryController extends Controller
 
     private function authorizeCategory(Request $request, Category $category): void
     {
-        abort_unless($category->user_id === $request->user()->id, 403, 'Unauthorized category access');
+        abort_unless($category->user_id === $request->user()->bookOwnerId(), 403, 'Unauthorized category access');
     }
 }

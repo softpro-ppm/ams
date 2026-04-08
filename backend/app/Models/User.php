@@ -32,6 +32,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_active',
+        'book_owner_id',
     ];
 
     /**
@@ -66,6 +67,11 @@ class User extends Authenticatable
     public function isReceptionist(): bool
     {
         return ($this->role ?? '') === 'receptionist';
+    }
+
+    public function bookOwnerId(): int
+    {
+        return $this->book_owner_id ?? $this->id;
     }
 
     public function projects(): HasMany

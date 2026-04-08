@@ -13,7 +13,7 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $query = Project::query()
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $request->user()->bookOwnerId())
             ->when(! $request->boolean('include_inactive'), fn ($q) => $q->where('is_active', true))
             ->withSum(['transactions as income_total' => fn ($q) => $q->where('type', 'income')], 'amount')
             ->withSum(['transactions as expense_total' => fn ($q) => $q->where('type', 'expense')], 'amount')
@@ -27,7 +27,7 @@ class ProjectController extends Controller
     {
         try {
             $validated = $request->validated();
-            $userId = $request->user()->id;
+            $userId = $request->user()->bookOwnerId();
             
             // Check for duplicate name
             $existing = Project::where('user_id', $userId)
@@ -88,6 +88,6 @@ class ProjectController extends Controller
 
     private function authorizeProject(Request $request, Project $project): void
     {
-        abort_unless($project->user_id === $request->user()->id, 403, 'Unauthorized project access');
+        abort_unless($project->user_id === $request->user()->bookOwnerId(), 403, 'Unauthorized project access');
     }
 }

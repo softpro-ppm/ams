@@ -12,7 +12,7 @@ class LedgerController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         $query = LedgerEntry::query()
             ->where('user_id', $userId)
@@ -39,7 +39,8 @@ class LedgerController extends Controller
         ]);
 
         $entry = LedgerEntry::create([
-            'user_id' => $request->user()->id,
+            // Always attribute to the book owner (admin), even if receptionist enters it.
+            'user_id' => $request->user()->bookOwnerId(),
             'entered_by' => $request->user()->id,
             'entry_date' => $validated['entry_date'],
             'ledger' => $validated['ledger'],
@@ -55,7 +56,7 @@ class LedgerController extends Controller
     public function approve(Request $request, LedgerEntry $ledgerEntry): JsonResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
-        abort_unless($ledgerEntry->user_id === $request->user()->id, 403);
+        abort_unless($ledgerEntry->user_id === $request->user()->bookOwnerId(), 403);
         abort_if($ledgerEntry->status !== LedgerEntry::STATUS_PENDING, 422, 'Only pending entries can be approved.');
 
         $ledgerEntry->update([
@@ -69,7 +70,7 @@ class LedgerController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
         $date = $request->query('date') ? Carbon::parse($request->query('date'))->toDateString() : now()->toDateString();
 
         $rows = LedgerEntry::query()

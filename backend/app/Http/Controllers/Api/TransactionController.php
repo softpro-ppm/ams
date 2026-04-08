@@ -15,7 +15,7 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
         $perPage = min(100, $request->integer('per_page', 15));
 
         $query = Transaction::with(['project', 'category', 'subcategory'])
@@ -45,7 +45,7 @@ class TransactionController extends Controller
 
         $transaction = Transaction::create([
             ...$request->validated(),
-            'user_id' => $request->user()->id,
+            'user_id' => $request->user()->bookOwnerId(),
         ]);
 
         return new TransactionResource($transaction->load(['project', 'category', 'subcategory']));
@@ -79,12 +79,12 @@ class TransactionController extends Controller
 
     private function authorizeTransaction(Request $request, Transaction $transaction): void
     {
-        abort_unless($transaction->user_id === $request->user()->id, 403, 'Unauthorized transaction access');
+        abort_unless($transaction->user_id === $request->user()->bookOwnerId(), 403, 'Unauthorized transaction access');
     }
 
     private function validateRelations(Request $request): array
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         $category = Category::where('id', $request->category_id)
             ->where('user_id', $userId)

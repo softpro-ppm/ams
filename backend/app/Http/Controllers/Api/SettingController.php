@@ -13,13 +13,13 @@ class SettingController extends Controller
     public function index(Request $request)
     {
         return SettingResource::collection(
-            Setting::where('user_id', $request->user()->id)->get()
+            Setting::where('user_id', $request->user()->bookOwnerId())->get()
         );
     }
 
     public function update(SettingRequest $request)
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         foreach ($request->validated('settings') as $input) {
             Setting::updateOrCreate(
@@ -38,7 +38,7 @@ class SettingController extends Controller
 
     public function clearAllData(Request $request)
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         try {
             // Delete all transactions
