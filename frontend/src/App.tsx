@@ -9,6 +9,7 @@ import { ReportsPage } from "@/pages/reports";
 import { ProjectsPage } from "@/pages/projects";
 import { CategoriesPage } from "@/pages/categories";
 import { SettingsPage } from "@/pages/settings";
+import { LedgersPage } from "@/pages/ledgers";
 import { Loader2 } from "lucide-react";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
@@ -132,6 +133,7 @@ function AppRoutes() {
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/loans" element={<LoansPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/ledgers" element={<LedgersPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/settings" element={<SettingsPage />} />

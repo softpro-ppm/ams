@@ -2,6 +2,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  role?: "admin" | "receptionist";
+  is_active?: boolean;
 }
 
 export interface Project {
@@ -50,6 +52,22 @@ export interface Transaction {
   project?: Project;
   category?: Category;
   subcategory?: Subcategory;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LedgerEntry {
+  id: number;
+  user_id: number;
+  entered_by?: number | null;
+  approved_by?: number | null;
+  entry_date: string;
+  ledger: "cash" | "bank";
+  direction: "received" | "paid";
+  amount: number;
+  note?: string | null;
+  status: "pending" | "approved" | "rejected";
+  approved_at?: string | null;
   created_at: string;
   updated_at: string;
 }

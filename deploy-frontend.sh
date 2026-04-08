@@ -63,49 +63,64 @@ if [ "$DEPLOY_MODE" = "frontend" ]; then
 fi
 
 echo -e "\n${BLUE}Step 3: Uploading backend changes...${NC}"
-# Ensure Income request dir exists on server
-ssh ${SSH_OPTS} -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${BACKEND_PATH}/app/Http/Requests/Income ${BACKEND_PATH}/resources/views/reports" 2>/dev/null
-# Deploy IMS + SMS + dashboard timezone/quarter fixes (controllers, config, middleware, requests, routes, bootstrap)
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Controllers/Api/DashboardController.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Controllers/Api/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/config/app.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/config/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Controllers/Api/IncomeFromImsController.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Controllers/Api/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Controllers/Api/ReportController.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Controllers/Api/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Controllers/Api/IncomeFromSmsController.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Controllers/Api/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Middleware/ValidateImsApiKey.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Middleware/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Middleware/ValidateSmsApiKey.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Middleware/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Requests/Income/IncomeFromImsRequest.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Requests/Income/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/app/Http/Requests/Income/IncomeFromSmsRequest.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/Http/Requests/Income/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/routes/api.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/routes/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/bootstrap/app.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/bootstrap/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/config/services.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/config/ && \
-scp ${SSH_OPTS} -P ${SERVER_PORT} backend/resources/views/reports/statement.blade.php \
-    ${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/resources/views/reports/
+# rsync keeps backend in sync with repo (controllers/routes/models/migrations). Partial scp breaks production.
+RSYNC_EXCLUDES=(--exclude='vendor' --exclude='node_modules' --exclude='.env' --exclude='storage/logs/*' --exclude='storage/framework/cache/*' --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*')
+RSYNC_SSH="ssh ${SSH_OPTS} -p ${SERVER_PORT}"
 
-if [ $? -ne 0 ]; then
-    echo -e "\n${YELLOW}⚠ Backend upload failed (frontend deployed). Check backend path.${NC}"
+if command -v rsync >/dev/null 2>&1; then
+    rsync -avz \
+        "${RSYNC_EXCLUDES[@]}" \
+        -e "${RSYNC_SSH}" \
+        backend/app/ \
+        "${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/app/" && \
+    rsync -avz \
+        "${RSYNC_EXCLUDES[@]}" \
+        -e "${RSYNC_SSH}" \
+        backend/routes/ \
+        "${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/routes/" && \
+    # Never sync bootstrap/cache/*.php from dev.
+    rsync -avz \
+        "${RSYNC_EXCLUDES[@]}" \
+        --exclude='cache/*.php' \
+        -e "${RSYNC_SSH}" \
+        backend/bootstrap/ \
+        "${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/bootstrap/" && \
+    rsync -avz \
+        "${RSYNC_EXCLUDES[@]}" \
+        -e "${RSYNC_SSH}" \
+        backend/config/ \
+        "${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/config/" && \
+    rsync -avz \
+        "${RSYNC_EXCLUDES[@]}" \
+        -e "${RSYNC_SSH}" \
+        backend/database/migrations/ \
+        "${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/database/migrations/" && \
+    rsync -avz \
+        "${RSYNC_EXCLUDES[@]}" \
+        -e "${RSYNC_SSH}" \
+        backend/resources/views/ \
+        "${SERVER_USER}@${SERVER_HOST}:${BACKEND_PATH}/resources/views/"
+    RSYNC_OK=$?
 else
-    echo -e "${GREEN}✓ Backend uploaded (dashboard + config timezone, IMS/SMS, reports, routes, bootstrap)${NC}"
+    echo -e "${YELLOW}rsync not found; install rsync or upload backend manually.${NC}"
+    RSYNC_OK=1
 fi
 
-echo -e "\n${BLUE}Step 4: Clearing Laravel cache on server...${NC}"
-ssh ${SSH_OPTS} -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "cd ${BACKEND_PATH} && php artisan cache:clear && php artisan config:clear && php artisan route:clear"
+if [ $RSYNC_OK -ne 0 ]; then
+    echo -e "\n${YELLOW}⚠ Backend rsync failed (frontend deployed).${NC}"
+else
+    echo -e "${GREEN}✓ Backend synced (app, routes, bootstrap, config, migrations, views)${NC}"
+fi
+
+echo -e "\n${BLUE}Step 4: Laravel migrate + clear caches on server...${NC}"
+# Drop cached manifests that may reference dev-only packages, then rebuild from server's vendor/composer.
+ssh ${SSH_OPTS} -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "cd ${BACKEND_PATH} && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php bootstrap/cache/config.php 2>/dev/null; php artisan package:discover --ansi && php artisan migrate --force && php artisan optimize:clear"
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓ Cache cleared${NC}"
+    echo -e "${GREEN}✓ Migrate + caches cleared${NC}"
 else
-    echo -e "${YELLOW}⚠ Cache clear failed. You may need to run manually: php artisan cache:clear${NC}"
+    echo -e "${YELLOW}⚠ Step 4 failed. On the server run:${NC}"
+    echo -e "  cd ${BACKEND_PATH} && rm -f bootstrap/cache/packages.php bootstrap/cache/services.php bootstrap/cache/config.php && php artisan package:discover && php artisan migrate --force && php artisan optimize:clear"
 fi
 
 echo -e "\n${BLUE}Step 5: Recent Laravel log (last 15 lines)...${NC}"

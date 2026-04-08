@@ -5,6 +5,7 @@ import type {
   Category,
   Subcategory,
   Transaction,
+  LedgerEntry,
   Loan,
   LoanPayment,
   LoanDisbursement,
@@ -218,6 +219,26 @@ export const transactionsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/transactions/${id}`);
+  },
+};
+
+// Ledgers (cash/bank) with approval
+export const ledgersApi = {
+  summary: async (date?: string): Promise<{ date: string; cash_balance: number; bank_balance: number; pending_count: number }> => {
+    const { data } = await apiClient.get("/ledgers/summary", { params: { date } });
+    return data;
+  },
+  list: async (params?: { ledger?: "cash" | "bank"; status?: "pending" | "approved"; date_from?: string; date_to?: string }): Promise<LedgerEntry[]> => {
+    const { data } = await apiClient.get("/ledgers", { params });
+    return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+  },
+  create: async (body: { entry_date: string; ledger: "cash" | "bank"; direction: "received" | "paid"; amount: number; note?: string }): Promise<LedgerEntry> => {
+    const { data } = await apiClient.post("/ledgers", body);
+    return data?.data ?? data;
+  },
+  approve: async (id: number): Promise<LedgerEntry> => {
+    const { data } = await apiClient.post(`/ledgers/${id}/approve`);
+    return data?.data ?? data;
   },
 };
 

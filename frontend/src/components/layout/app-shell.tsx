@@ -5,6 +5,7 @@ import {
   FolderKanban,
   HandCoins,
   LayoutDashboard,
+  ListChecks,
   LogOut,
   Menu,
   ReceiptIndianRupee,
@@ -42,6 +43,7 @@ type AppShellProps = {
 const NAV_ITEMS = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
   { label: "Transactions", to: "/transactions", icon: ReceiptIndianRupee },
+  { label: "Ledgers", to: "/ledgers", icon: ListChecks },
   { label: "Loans", to: "/loans", icon: HandCoins },
   { label: "Reports", to: "/reports", icon: ChartPie },
   { label: "Projects", to: "/projects", icon: Blocks },

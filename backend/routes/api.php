@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\IncomeFromImsController;
 use App\Http\Controllers\Api\IncomeFromSmsController;
+use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\LoanController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ReportController;
@@ -51,6 +52,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/settings', [SettingController::class, 'index']);
     Route::put('/settings', [SettingController::class, 'update']);
     Route::post('/settings/clear-all-data', [SettingController::class, 'clearAllData']);
+
+    // Ledgers (cash/bank) with admin approval
+    Route::get('/ledgers/summary', [LedgerController::class, 'summary']);
+    Route::get('/ledgers', [LedgerController::class, 'index']);
+    Route::post('/ledgers', [LedgerController::class, 'store']);
+    Route::post('/ledgers/{ledgerEntry}/approve', [LedgerController::class, 'approve'])->middleware('admin');
 
     // Bulk Import
     Route::post('/bulk-import/transactions', [BulkImportController::class, 'importTransactions']);
