@@ -28,6 +28,7 @@ Route::post('/income/from-sms', [IncomeFromSmsController::class, 'store'])
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me/profile', [AuthController::class, 'updateProfile']);
 
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
 
@@ -53,28 +54,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/settings', [SettingController::class, 'update']);
     Route::post('/settings/clear-all-data', [SettingController::class, 'clearAllData']);
 
+    // Ledgers (cash/bank) with admin approval
+    Route::get('/ledgers/summary', [LedgerController::class, 'summary']);
+    Route::get('/ledgers/closure-status', [LedgerController::class, 'closureStatus']);
+    Route::get('/ledgers/closures', [LedgerController::class, 'closures']);
+    Route::post('/ledgers/closures', [LedgerController::class, 'closeStore'])->middleware('admin');
+    Route::delete('/ledgers/closures/{ledgerClosure}', [LedgerController::class, 'closeDestroy'])->middleware('admin');
+    Route::get('/ledgers/statement/export/csv', [LedgerController::class, 'statementExportCsv']);
+    Route::get('/ledgers/statement/export/pdf', [LedgerController::class, 'statementExportPdf']);
+    Route::get('/ledgers/statement', [LedgerController::class, 'statement']);
+    Route::post('/ledgers/approval-otp/send', [LedgerController::class, 'sendApprovalOtp'])->middleware('admin');
+    Route::post('/ledgers/approve-bulk', [LedgerController::class, 'approveBulk'])->middleware('admin');
+    Route::get('/ledgers', [LedgerController::class, 'index']);
+    Route::post('/ledgers/import-csv', [LedgerController::class, 'importCsv']);
+    Route::post('/ledgers', [LedgerController::class, 'store']);
+    Route::put('/ledgers/{ledgerEntry}', [LedgerController::class, 'update']);
+    Route::delete('/ledgers/{ledgerEntry}', [LedgerController::class, 'destroy']);
+    Route::post('/ledgers/{ledgerEntry}/approve', [LedgerController::class, 'approve'])->middleware('admin');
+
     // Bulk Import
     Route::post('/bulk-import/transactions', [BulkImportController::class, 'importTransactions']);
     Route::post('/bulk-import/loans', [BulkImportController::class, 'importLoans']);
     Route::get('/bulk-import/transactions/template', [BulkImportController::class, 'exportTransactionTemplate']);
     Route::get('/bulk-import/loans/template', [BulkImportController::class, 'exportLoanTemplate']);
-
-    // Ledgers (cash / bank book — routes must stay registered or deploy overwrites break the live API)
-    Route::get('/ledgers/summary', [LedgerController::class, 'summary']);
-    Route::get('/ledgers', [LedgerController::class, 'index']);
-    Route::post('/ledgers', [LedgerController::class, 'store']);
-    Route::post('/ledgers/import-csv', [LedgerController::class, 'importCsv']);
-    Route::post('/ledgers/send-approval-otp', [LedgerController::class, 'sendApprovalOtp']);
-    Route::post('/ledgers/approve-bulk', [LedgerController::class, 'approveBulk']);
-    Route::post('/ledgers/{ledgerEntry}/approve', [LedgerController::class, 'approve']);
-    Route::put('/ledgers/{ledgerEntry}', [LedgerController::class, 'update']);
-    Route::delete('/ledgers/{ledgerEntry}', [LedgerController::class, 'destroy']);
-    Route::get('/ledgers/statement', [LedgerController::class, 'statement']);
-    Route::get('/ledgers/statement/export-csv', [LedgerController::class, 'statementExportCsv']);
-    Route::get('/ledgers/statement/export-pdf', [LedgerController::class, 'statementExportPdf']);
-    Route::get('/ledgers/closure-status', [LedgerController::class, 'closureStatus']);
-    Route::get('/ledgers/closures', [LedgerController::class, 'closures']);
-    Route::post('/ledgers/closures', [LedgerController::class, 'closeStore']);
-    Route::delete('/ledgers/closures/{ledgerClosure}', [LedgerController::class, 'closeDestroy']);
 });
 

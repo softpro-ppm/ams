@@ -19,7 +19,7 @@ class LoanController extends Controller
 {
     public function index(Request $request)
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
         $perPage = min(100, $request->integer('per_page', 15));
 
         $query = Loan::where('user_id', $userId)
@@ -39,7 +39,7 @@ class LoanController extends Controller
 
         $loan = Loan::create([
             ...$request->validated(),
-            'user_id' => $request->user()->id,
+            'user_id' => $request->user()->bookOwnerId(),
         ]);
 
         return new LoanResource($loan->load('project', 'payments', 'disbursements'));
@@ -79,7 +79,7 @@ class LoanController extends Controller
         $this->authorizeLoan($request, $loan);
 
         $payment = $loan->payments()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $request->user()->bookOwnerId(),
             'flow' => $loan->type === 'given' ? 'in' : 'out',
             ...$request->validated(),
         ]);
@@ -115,7 +115,7 @@ class LoanController extends Controller
         $this->authorizeLoan($request, $loan);
 
         $disbursement = $loan->disbursements()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $request->user()->bookOwnerId(),
             ...$request->validated(),
         ]);
 
@@ -168,14 +168,14 @@ class LoanController extends Controller
 
     private function authorizeLoan(Request $request, Loan $loan): void
     {
-        abort_unless($loan->user_id === $request->user()->id, 403, 'Unauthorized loan access');
+        abort_unless($loan->user_id === $request->user()->bookOwnerId(), 403, 'Unauthorized loan access');
     }
 
     private function validateProjectOwnership(Request $request): void
     {
         if ($request->filled('project_id')) {
             Project::where('id', $request->project_id)
-                ->where('user_id', $request->user()->id)
+                ->where('user_id', $request->user()->bookOwnerId())
                 ->firstOrFail();
         }
     }

@@ -2,6 +2,12 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  /** WhatsApp / SMS number for ledger approval OTP (admins). */
+  phone?: string | null;
+  role?: "admin" | "receptionist";
+  is_active?: boolean;
+  /** Present on /me — server requires OTP for ledger approvals when true. */
+  ledger_approval_otp_enabled?: boolean;
 }
 
 export interface Project {
@@ -52,6 +58,66 @@ export interface Transaction {
   subcategory?: Subcategory;
   created_at: string;
   updated_at: string;
+}
+
+export interface LedgerEntry {
+  id: number;
+  user_id: number;
+  entered_by?: number | null;
+  approved_by?: number | null;
+  entered_by_name?: string | null;
+  approved_by_name?: string | null;
+  entry_date: string;
+  ledger: "cash" | "bank";
+  direction: "received" | "paid";
+  amount: number;
+  particulars?: string | null;
+  note?: string | null;
+  status: "pending" | "approved" | "rejected";
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LedgerStatementRow = LedgerEntry & {
+  balance_after: number;
+  received_amount: number;
+  paid_amount: number;
+};
+
+export interface LedgerStatementResponse {
+  ledger: "cash" | "bank" | "all";
+  date_from: string;
+  date_to: string;
+  include_pending: boolean;
+  opening_balance: number;
+  closing_balance: number;
+  /** Present when `ledger === "all"` (merged cash + bank). */
+  opening_balance_cash?: number;
+  opening_balance_bank?: number;
+  closing_balance_cash?: number;
+  closing_balance_bank?: number;
+  data: LedgerStatementRow[];
+  pending_in_period: Array<
+    LedgerEntry & { received_amount: number; paid_amount: number; entered_by_name?: string | null; approved_by_name?: string | null }
+  >;
+}
+
+export interface LedgerClosureRow {
+  id: number;
+  closed_through_date: string;
+  cash_balance_snapshot: number;
+  bank_balance_snapshot: number;
+  notes?: string | null;
+  closed_by_name?: string | null;
+  created_at?: string;
+}
+
+export interface LedgerClosureStatus {
+  closed_through_date?: string | null;
+  cash_balance_snapshot?: number | null;
+  bank_balance_snapshot?: number | null;
+  closure_id?: number | null;
 }
 
 export interface Loan {
@@ -113,6 +179,10 @@ export interface DashboardSummary {
   income_vs_expense: Array<{ date: string; income: number; expense: number }>;
   net_balance_trend: Array<{ date: string; balance: number }>;
   project_breakdown: Array<{ project: Project; income: number; expense: number }>;
+  ledger_cash_balance?: number;
+  ledger_bank_balance?: number;
+  ledger_pending_count?: number;
+  ledger_trend?: Array<{ date: string; cash: number; bank: number }>;
 }
 
 export interface Setting {

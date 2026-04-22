@@ -18,6 +18,7 @@ class DashboardSummaryResource extends JsonResource
         $data = is_array($this->resource) ? $this->resource : (array) $this->resource;
         $kpis = $data['kpis'] ?? [];
         $charts = $data['charts'] ?? [];
+        $ledger = $data['ledger'] ?? [];
 
         return [
             'total_income' => (float) ($kpis['total_income'] ?? 0),
@@ -35,6 +36,10 @@ class DashboardSummaryResource extends JsonResource
             'income_vs_expense' => $charts['income_vs_expense'] ?? [],
             'net_balance_trend' => $charts['net_trend'] ?? [],
             'project_breakdown' => $data['project_breakdown'] ?? [],
+            'ledger_cash_balance' => (float) ($ledger['cash_balance'] ?? 0),
+            'ledger_bank_balance' => (float) ($ledger['bank_balance'] ?? 0),
+            'ledger_pending_count' => (int) ($ledger['pending_count'] ?? 0),
+            'ledger_trend' => $ledger['trend'] ?? [],
         ];
     }
 }

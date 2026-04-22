@@ -94,7 +94,7 @@ class ReportController extends Controller
 
     private function baseQuery(Request $request)
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         return Transaction::with(['project', 'category', 'subcategory'])
             ->where('user_id', $userId)

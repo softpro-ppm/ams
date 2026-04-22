@@ -29,7 +29,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
+        'role',
+        'is_active',
+        'book_owner_id',
     ];
 
     /**
@@ -52,7 +56,23 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function isAdmin(): bool
+    {
+        return ($this->role ?? 'admin') === 'admin';
+    }
+
+    public function isReceptionist(): bool
+    {
+        return ($this->role ?? '') === 'receptionist';
+    }
+
+    public function bookOwnerId(): int
+    {
+        return $this->book_owner_id ?? $this->id;
     }
 
     public function projects(): HasMany

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, subDays, startOfMonth, endOfMonth } from "date-fns";
 import {
@@ -79,23 +79,7 @@ export function ReportsPage() {
   const [projectId, setProjectId] = useState<number | "">("");
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [pendingDateFrom, setPendingDateFrom] = useState("");
-  const [pendingDateTo, setPendingDateTo] = useState("");
-  const [pendingType, setPendingType] = useState<"income" | "expense" | "">("");
-  const [pendingProjectId, setPendingProjectId] = useState<number | "">("");
-  const [pendingCategoryId, setPendingCategoryId] = useState<number | "">("");
   const { toast } = useToast();
-
-  // Sync pending filters when sheet opens
-  useEffect(() => {
-    if (isFiltersOpen) {
-      setPendingDateFrom(dateFrom);
-      setPendingDateTo(dateTo);
-      setPendingType(type);
-      setPendingProjectId(projectId);
-      setPendingCategoryId(categoryId);
-    }
-  }, [isFiltersOpen, dateFrom, dateTo, type, projectId, categoryId]);
 
   const filters = useMemo(() => {
     const result: {
@@ -146,10 +130,6 @@ export function ReportsPage() {
     () => (Array.isArray(categories) ? categories.filter((c) => !type || c.type === type) : []),
     [categories, type]
   );
-  const pendingAvailableCategories = useMemo(
-    () => (Array.isArray(categories) ? categories.filter((c) => !pendingType || c.type === pendingType) : []),
-    [categories, pendingType]
-  );
 
   const handleExportCsv = async () => {
     try {
@@ -199,57 +179,39 @@ export function ReportsPage() {
     }
   };
 
-  const handleQuickDateRange = (range: "today" | "week" | "month" | "year", forPending = false) => {
+  const handleQuickDateRange = (range: "today" | "week" | "month" | "year") => {
     const today = new Date();
-    const setFrom = forPending ? setPendingDateFrom : setDateFrom;
-    const setTo = forPending ? setPendingDateTo : setDateTo;
     switch (range) {
       case "today":
-        setFrom(format(today, "yyyy-MM-dd"));
-        setTo(format(today, "yyyy-MM-dd"));
+        setDateFrom(format(today, "yyyy-MM-dd"));
+        setDateTo(format(today, "yyyy-MM-dd"));
         break;
       case "week":
-        setFrom(format(subDays(today, 7), "yyyy-MM-dd"));
-        setTo(format(today, "yyyy-MM-dd"));
+        setDateFrom(format(subDays(today, 7), "yyyy-MM-dd"));
+        setDateTo(format(today, "yyyy-MM-dd"));
         break;
       case "month":
-        setFrom(format(startOfMonth(today), "yyyy-MM-dd"));
-        setTo(format(endOfMonth(today), "yyyy-MM-dd"));
+        setDateFrom(format(startOfMonth(today), "yyyy-MM-dd"));
+        setDateTo(format(endOfMonth(today), "yyyy-MM-dd"));
         break;
       case "year":
-        setFrom(format(new Date(today.getFullYear(), 0, 1), "yyyy-MM-dd"));
-        setTo(format(new Date(today.getFullYear(), 11, 31), "yyyy-MM-dd"));
+        setDateFrom(format(new Date(today.getFullYear(), 0, 1), "yyyy-MM-dd"));
+        setDateTo(format(new Date(today.getFullYear(), 11, 31), "yyyy-MM-dd"));
         break;
     }
   };
 
-  const handleApplyFilters = () => {
-    setDateFrom(pendingDateFrom);
-    setDateTo(pendingDateTo);
-    setType(pendingType);
-    setProjectId(pendingProjectId);
-    setCategoryId(pendingCategoryId);
-    setIsFiltersOpen(false);
-  };
-
   const handleClearFilters = () => {
-    const empty = "";
     setType("");
     setProjectId("");
     setCategoryId("");
-    setDateFrom(empty);
-    setDateTo(empty);
-    setPendingDateFrom(empty);
-    setPendingDateTo(empty);
-    setPendingType("");
-    setPendingProjectId("");
-    setPendingCategoryId("");
-    setIsFiltersOpen(false);
+    setDateFrom("");
+    setDateTo("");
   };
 
   const hasActiveFilters = useMemo(() => {
-    return type !== "" || projectId !== "" || categoryId !== "" || dateFrom !== "" || dateTo !== "";
-  }, [type, projectId, categoryId, dateFrom, dateTo]);
+    return type !== "" || projectId !== "" || categoryId !== "";
+  }, [type, projectId, categoryId]);
 
   // Prepare chart data
   const incomeVsExpenseData = useMemo(() => {
@@ -332,15 +294,15 @@ export function ReportsPage() {
                   <div className="flex flex-col gap-2">
                     <Input
                       type="date"
-                      value={pendingDateFrom}
-                      onChange={(e) => setPendingDateFrom(e.target.value)}
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
                       className="bg-slate-800 border-slate-600 text-white"
                     />
                     <Input
                       type="date"
-                      value={pendingDateTo}
-                      onChange={(e) => setPendingDateTo(e.target.value)}
-                      min={pendingDateFrom}
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      min={dateFrom}
                       className="bg-slate-800 border-slate-600 text-white"
                     />
                   </div>
@@ -348,7 +310,7 @@ export function ReportsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleQuickDateRange("today", true)}
+                      onClick={() => handleQuickDateRange("today")}
                       className="border-slate-600 text-white hover:bg-slate-800"
                     >
                       Today
@@ -356,7 +318,7 @@ export function ReportsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleQuickDateRange("week", true)}
+                      onClick={() => handleQuickDateRange("week")}
                       className="border-slate-600 text-white hover:bg-slate-800"
                     >
                       Week
@@ -364,7 +326,7 @@ export function ReportsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleQuickDateRange("month", true)}
+                      onClick={() => handleQuickDateRange("month")}
                       className="border-slate-600 text-white hover:bg-slate-800"
                     >
                       Month
@@ -372,7 +334,7 @@ export function ReportsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleQuickDateRange("year", true)}
+                      onClick={() => handleQuickDateRange("year")}
                       className="border-slate-600 text-white hover:bg-slate-800"
                     >
                       Year
@@ -382,10 +344,10 @@ export function ReportsPage() {
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select
-                    value={pendingType || "all"}
+                    value={type || "all"}
                     onValueChange={(v) => {
-                      setPendingType(v === "all" ? "" : v as "income" | "expense");
-                      setPendingCategoryId("");
+                      setType(v === "all" ? "" : v as "income" | "expense");
+                      setCategoryId("");
                     }}
                   >
                     <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
@@ -401,8 +363,8 @@ export function ReportsPage() {
                 <div className="space-y-2">
                   <Label>Project</Label>
                   <Select
-                    value={pendingProjectId ? pendingProjectId.toString() : "all"}
-                    onValueChange={(v) => setPendingProjectId(v === "all" ? "" : Number(v))}
+                    value={projectId ? projectId.toString() : "all"}
+                    onValueChange={(v) => setProjectId(v === "all" ? "" : Number(v))}
                   >
                     <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                       <SelectValue placeholder="All projects" />
@@ -420,15 +382,15 @@ export function ReportsPage() {
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <Select
-                    value={pendingCategoryId ? pendingCategoryId.toString() : "all"}
-                    onValueChange={(v) => setPendingCategoryId(v === "all" ? "" : Number(v))}
+                    value={categoryId ? categoryId.toString() : "all"}
+                    onValueChange={(v) => setCategoryId(v === "all" ? "" : Number(v))}
                   >
                     <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                       <SelectValue placeholder="All categories" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700 text-white">
                       <SelectItem value="all">All categories</SelectItem>
-                      {pendingAvailableCategories.map((c) => (
+                      {availableCategories.map((c) => (
                         <SelectItem key={c.id} value={c.id.toString()}>
                           {c.name}
                         </SelectItem>
@@ -436,12 +398,6 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  onClick={handleApplyFilters}
-                  className="w-full bg-primary text-primary-foreground"
-                >
-                  Apply Filter
-                </Button>
                 <Button
                   variant="outline"
                   onClick={handleClearFilters}

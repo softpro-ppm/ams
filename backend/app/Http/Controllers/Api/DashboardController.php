@@ -7,6 +7,7 @@ use App\Http\Resources\CategoryResource;
 use App\Http\Resources\DashboardSummaryResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\Category;
+use App\Models\LedgerEntry;
 use App\Models\Loan;
 use App\Models\Project;
 use App\Models\Transaction;
@@ -18,7 +19,7 @@ class DashboardController extends Controller
 {
     public function summary(Request $request): DashboardSummaryResource
     {
-        $userId = $request->user()->id;
+        $userId = $request->user()->bookOwnerId();
 
         // Default to all time if no date filters provided, otherwise use the provided dates
         $hasDateFilter = $request->has('date_from') && $request->filled('date_from') 
@@ -107,6 +108,14 @@ class DashboardController extends Controller
 
         $kpis['pending_loans_total'] = $pendingLoansTotal;
 
+        $todayStr = now()->toDateString();
+        $ledgerCash = $this->ledgerApprovedBalance($userId, LedgerEntry::LEDGER_CASH, $todayStr);
+        $ledgerBank = $this->ledgerApprovedBalance($userId, LedgerEntry::LEDGER_BANK, $todayStr);
+        $ledgerPendingCount = LedgerEntry::where('user_id', $userId)
+            ->where('status', LedgerEntry::STATUS_PENDING)
+            ->count();
+        $ledgerTrend = $this->ledgerCashBankTrend($userId, 14);
+
         $data = [
             'kpis' => $kpis,
             'charts' => [
@@ -116,6 +125,12 @@ class DashboardController extends Controller
                 'net_trend' => $trend,
             ],
             'project_breakdown' => $projectBreakdown,
+            'ledger' => [
+                'cash_balance' => $ledgerCash,
+                'bank_balance' => $ledgerBank,
+                'pending_count' => $ledgerPendingCount,
+                'trend' => $ledgerTrend,
+            ],
         ];
 
         return new DashboardSummaryResource($data);
@@ -266,6 +281,80 @@ class DashboardController extends Controller
             ->filter()
             ->values()
             ->toArray();
+    }
+
+    private function ledgerApprovedBalance(int $userId, string $ledger, string $asOfDate): float
+    {
+        $sum = 0.0;
+        $rows = LedgerEntry::query()
+            ->where('user_id', $userId)
+            ->where('status', LedgerEntry::STATUS_APPROVED)
+            ->where('ledger', $ledger)
+            ->whereDate('entry_date', '<=', $asOfDate)
+            ->get(['direction', 'amount']);
+
+        foreach ($rows as $r) {
+            $amt = (float) $r->amount;
+            $sum += $r->direction === LedgerEntry::DIR_RECEIVED ? $amt : -$amt;
+        }
+
+        return round($sum, 2);
+    }
+
+    /**
+     * @return list<array{date: string, cash: float, bank: float}>
+     */
+    private function ledgerCashBankTrend(int $userId, int $dayCount): array
+    {
+        $end = now()->toDateString();
+        $start = now()->copy()->subDays($dayCount - 1)->toDateString();
+
+        $all = LedgerEntry::query()
+            ->where('user_id', $userId)
+            ->where('status', LedgerEntry::STATUS_APPROVED)
+            ->whereDate('entry_date', '<=', $end)
+            ->orderBy('entry_date')
+            ->orderBy('id')
+            ->get(['entry_date', 'ledger', 'direction', 'amount']);
+
+        $days = [];
+        $cur = Carbon::parse($start);
+        $limit = Carbon::parse($end);
+        while ($cur->lte($limit)) {
+            $days[] = $cur->toDateString();
+            $cur->addDay();
+        }
+
+        $cash = 0.0;
+        $bank = 0.0;
+        $result = [];
+        $i = 0;
+        $n = $all->count();
+
+        foreach ($days as $dayStr) {
+            while ($i < $n) {
+                $row = $all[$i];
+                $d = Carbon::parse($row->entry_date)->toDateString();
+                if ($d > $dayStr) {
+                    break;
+                }
+                $amt = (float) $row->amount;
+                $delta = $row->direction === LedgerEntry::DIR_RECEIVED ? $amt : -$amt;
+                if ($row->ledger === LedgerEntry::LEDGER_CASH) {
+                    $cash += $delta;
+                } else {
+                    $bank += $delta;
+                }
+                $i++;
+            }
+            $result[] = [
+                'date' => $dayStr,
+                'cash' => round($cash, 2),
+                'bank' => round($bank, 2),
+            ];
+        }
+
+        return $result;
     }
 
     private function pendingLoansTotal(int $userId): float

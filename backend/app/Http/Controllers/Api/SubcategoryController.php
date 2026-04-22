@@ -14,7 +14,7 @@ class SubcategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Subcategory::where('user_id', $request->user()->id)
+        $query = Subcategory::where('user_id', $request->user()->bookOwnerId())
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
             ->when(! $request->boolean('include_inactive'), fn ($q) => $q->where('is_active', true))
             ->orderBy('name');
@@ -24,11 +24,12 @@ class SubcategoryController extends Controller
 
     public function store(SubcategoryRequest $request)
     {
-        $category = $this->validateCategoryOwnership($request->user()->id, (int) $request->category_id);
+        $userId = $request->user()->bookOwnerId();
+        $category = $this->validateCategoryOwnership($userId, (int) $request->category_id);
 
         $subcategory = Subcategory::create([
             ...$request->validated(),
-            'user_id' => $request->user()->id,
+            'user_id' => $userId,
         ]);
 
         return new SubcategoryResource($subcategory->load('category'));
@@ -44,7 +45,7 @@ class SubcategoryController extends Controller
     public function update(SubcategoryRequest $request, Subcategory $subcategory)
     {
         $this->authorizeSubcategory($request, $subcategory);
-        $this->validateCategoryOwnership($request->user()->id, (int) $request->category_id);
+        $this->validateCategoryOwnership($request->user()->bookOwnerId(), (int) $request->category_id);
 
         $subcategory->update($request->validated());
 
@@ -70,7 +71,7 @@ class SubcategoryController extends Controller
 
     private function authorizeSubcategory(Request $request, Subcategory $subcategory): void
     {
-        abort_unless($subcategory->user_id === $request->user()->id, 403, 'Unauthorized subcategory access');
+        abort_unless($subcategory->user_id === $request->user()->bookOwnerId(), 403, 'Unauthorized subcategory access');
     }
 
     private function validateCategoryOwnership(int $userId, int $categoryId): Category

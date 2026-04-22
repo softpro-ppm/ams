@@ -5,13 +5,14 @@ import {
   FolderKanban,
   HandCoins,
   LayoutDashboard,
+  ListChecks,
   LogOut,
   Menu,
   ReceiptIndianRupee,
   Search,
   User,
 } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -34,14 +35,31 @@ import { transactionsApi, loansApi } from "@/services/api";
 import { QuickAddWidget } from "@/components/quick-add-widget";
 import { cn } from "@/lib/utils";
 import { Moon, Sun } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+type NavChild = { label: string; to: string };
+
+type NavItemConfig =
+  | { label: string; to: string; icon: LucideIcon; children?: undefined }
+  | { label: string; to: string; icon: LucideIcon; children: NavChild[] };
 
 type AppShellProps = {
   children: React.ReactNode;
 };
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItemConfig[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
   { label: "Transactions", to: "/transactions", icon: ReceiptIndianRupee },
+  {
+    label: "Ledgers",
+    to: "/ledgers",
+    icon: ListChecks,
+    children: [
+      { label: "Daily ledger", to: "/ledgers" },
+      { label: "Statement", to: "/ledgers/statement" },
+      { label: "Closing", to: "/ledgers/closing" },
+    ],
+  },
   { label: "Loans", to: "/loans", icon: HandCoins },
   { label: "Reports", to: "/reports", icon: ChartPie },
   { label: "Projects", to: "/projects", icon: Blocks },
@@ -74,18 +92,23 @@ export function AppShell({ children }: AppShellProps) {
       { label: "Go to Reports", href: "/reports", category: "Quick Actions" },
       { label: "Go to Categories", href: "/categories", category: "Quick Actions" },
       // Navigation
-      ...NAV_ITEMS.map((item) => ({
-        label: item.label,
-        href: item.to,
-        category: "Navigation",
-      })),
+      ...NAV_ITEMS.flatMap((item) =>
+        item.children
+          ? item.children.map((c) => ({
+              label: `${item.label}: ${c.label}`,
+              href: c.to,
+              category: "Navigation",
+            }))
+          : [{ label: item.label, href: item.to, category: "Navigation" }]
+      ),
     ],
     []
   );
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-24 text-foreground">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-6 lg:flex-row">
+      {/* Full-width on large monitors (was max-w-7xl ~1280px, which left empty side margins). */}
+      <div className="flex w-full min-w-0 flex-col gap-6 px-4 pt-6 sm:px-5 lg:flex-row lg:px-6 xl:px-8">
         <aside className="hidden w-52 shrink-0 lg:block">
           <Brand />
           <Separator className="my-4" />
@@ -134,24 +157,62 @@ function Brand() {
 }
 
 function NavList() {
+  const { pathname } = useLocation();
+
   return (
-    <nav className="flex flex-col gap-1">
-      {NAV_ITEMS.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
-              "hover:bg-white/10 hover:text-white",
-              isActive ? "bg-white/10 text-white" : "text-slate-200"
-            )
-          }
-        >
-          <item.icon className="h-4 w-4" />
-          {item.label}
-        </NavLink>
-      ))}
+    <nav className="flex flex-col gap-2">
+      {NAV_ITEMS.map((item) => {
+        if (item.children) {
+          const childActive = item.children.some((c) => pathname === c.to);
+          return (
+            <div key={item.label} className="flex flex-col gap-1">
+              <div
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+                  childActive && "text-foreground"
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </div>
+              <div className="ml-2 flex flex-col gap-0.5 border-l border-border pl-3">
+                {item.children.map((sub) => (
+                  <NavLink
+                    key={sub.to}
+                    to={sub.to}
+                    className={({ isActive }) =>
+                      cn(
+                        "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                      )
+                    }
+                  >
+                    {sub.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
+                "hover:bg-accent hover:text-accent-foreground",
+                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+              )
+            }
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }
@@ -159,6 +220,7 @@ function NavList() {
 function TopBar({ commandPaletteRef }: { commandPaletteRef: React.RefObject<CommandPaletteRef> }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
+  const roleLabel = user?.role === "receptionist" ? "Reception" : "Admin";
 
   const userInitials = user?.name
     ? user.name
@@ -214,6 +276,9 @@ function TopBar({ commandPaletteRef }: { commandPaletteRef: React.RefObject<Comm
               <Avatar className="h-10 w-10 border-white/10 bg-white/10 text-white">
                 <AvatarFallback>{userInitials}</AvatarFallback>
               </Avatar>
+              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/90 px-2 py-0.5 text-[10px] font-semibold text-slate-200 shadow">
+                {roleLabel}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -221,6 +286,7 @@ function TopBar({ commandPaletteRef }: { commandPaletteRef: React.RefObject<Comm
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user?.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                <p className="text-xs leading-none text-slate-400">{roleLabel}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -270,12 +336,13 @@ function BottomNav() {
       <nav className="mx-auto flex max-w-3xl items-center justify-around px-3 py-3 text-xs text-slate-200">
         {NAV_ITEMS.map((item) => (
           <NavLink
-            key={item.to}
+            key={item.label}
             to={item.to}
+            end={!item.children}
             className={({ isActive }) =>
               cn(
                 "flex flex-col items-center gap-1 rounded-xl px-2 py-1 transition",
-                isActive ? "text-white" : "text-slate-300 hover:text-white"
+                isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               )
             }
           >

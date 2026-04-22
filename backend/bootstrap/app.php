@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ims.api_key' => \App\Http\Middleware\ValidateImsApiKey::class,
             'sms.api_key' => \App\Http\Middleware\ValidateSmsApiKey::class,
+            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
         $middleware->prependToGroup('web', HandleCors::class);
 

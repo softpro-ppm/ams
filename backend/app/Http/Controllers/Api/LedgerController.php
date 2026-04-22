@@ -269,7 +269,7 @@ class LedgerController extends Controller
                 Rule::requiredIf($otpEnabled),
                 'nullable',
                 'string',
-                'size:'.$digits,
+                Rule::size($digits),
             ],
         ]);
 
@@ -613,7 +613,7 @@ class LedgerController extends Controller
                 Rule::requiredIf($enabled),
                 'nullable',
                 'string',
-                'size:'.$digits,
+                Rule::size($digits),
             ],
         ]);
     }

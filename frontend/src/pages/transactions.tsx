@@ -89,22 +89,7 @@ export function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [pendingFilters, setPendingFilters] = useState({
-    type: "" as "" | "income" | "expense",
-    project_id: "" as number | "",
-    category_id: "" as number | "",
-    subcategory_id: "" as number | "",
-    date_from: "",
-    date_to: "",
-  });
   const { toast } = useToast();
-
-  // Sync pending filters when sheet opens
-  useEffect(() => {
-    if (isFiltersOpen) {
-      setPendingFilters(filters);
-    }
-  }, [isFiltersOpen, filters]);
   const queryClient = useQueryClient();
 
   // Fetch transactions
@@ -146,17 +131,15 @@ export function TransactionsPage() {
     queryFn: () => categoriesApi.list(),
   });
 
-  const subcategoryCategoryId = isFiltersOpen ? pendingFilters.category_id : filters.category_id;
   const { data: subcategories } = useQuery({
-    queryKey: ["subcategories", subcategoryCategoryId],
-    queryFn: () => subcategoriesApi.list(subcategoryCategoryId || undefined),
-    enabled: !!subcategoryCategoryId,
+    queryKey: ["subcategories", filters.category_id],
+    queryFn: () => subcategoriesApi.list(filters.category_id || undefined),
+    enabled: !!filters.category_id,
   });
 
   const incomeCategories = useMemo(() => (Array.isArray(categories) ? categories.filter((c) => c.type === "income") : []), [categories]);
   const expenseCategories = useMemo(() => (Array.isArray(categories) ? categories.filter((c) => c.type === "expense") : []), [categories]);
   const availableCategories = filters.type === "income" ? incomeCategories : filters.type === "expense" ? expenseCategories : (Array.isArray(categories) ? categories : []);
-  const pendingAvailableCategories = pendingFilters.type === "income" ? incomeCategories : pendingFilters.type === "expense" ? expenseCategories : (Array.isArray(categories) ? categories : []);
 
   const createMutation = useMutation({
     mutationFn: transactionsApi.create,
@@ -411,26 +394,17 @@ export function TransactionsPage() {
     pageCount: transactionsData?.last_page || 0,
   });
 
-  const handleApplyFilters = () => {
-    setFilters(pendingFilters);
-    setPage(1);
-    setIsFiltersOpen(false);
-  };
-
   const handleClearFilters = () => {
-    const empty = {
-      type: "" as "" | "income" | "expense",
-      project_id: "" as number | "",
-      category_id: "" as number | "",
-      subcategory_id: "" as number | "",
+    setFilters({
+      type: "",
+      project_id: "",
+      category_id: "",
+      subcategory_id: "",
       date_from: "",
       date_to: "",
-    };
-    setFilters(empty);
-    setPendingFilters(empty);
+    });
     setSearch("");
     setPage(1);
-    setIsFiltersOpen(false);
   };
 
   const hasActiveFilters = useMemo(() => {
@@ -474,9 +448,9 @@ export function TransactionsPage() {
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select
-                    value={pendingFilters.type || "all"}
+                    value={filters.type || "all"}
                     onValueChange={(v) => {
-                      setPendingFilters({ ...pendingFilters, type: v === "all" ? "" : v as "income" | "expense", category_id: "", subcategory_id: "" });
+                      setFilters({ ...filters, type: v === "all" ? "" : v as "income" | "expense", category_id: "", subcategory_id: "" });
                     }}
                   >
                     <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
@@ -492,8 +466,8 @@ export function TransactionsPage() {
                 <div className="space-y-2">
                   <Label>Project</Label>
                   <Select
-                    value={pendingFilters.project_id ? pendingFilters.project_id.toString() : "all"}
-                    onValueChange={(v) => setPendingFilters({ ...pendingFilters, project_id: v === "all" ? "" : Number(v) })}
+                    value={filters.project_id ? filters.project_id.toString() : "all"}
+                    onValueChange={(v) => setFilters({ ...filters, project_id: v === "all" ? "" : Number(v) })}
                   >
                     <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                       <SelectValue placeholder="All projects" />
@@ -511,9 +485,9 @@ export function TransactionsPage() {
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <Select
-                    value={pendingFilters.category_id ? pendingFilters.category_id.toString() : "all"}
+                    value={filters.category_id ? filters.category_id.toString() : "all"}
                     onValueChange={(v) => {
-                      setPendingFilters({ ...pendingFilters, category_id: v === "all" ? "" : Number(v), subcategory_id: "" });
+                      setFilters({ ...filters, category_id: v === "all" ? "" : Number(v), subcategory_id: "" });
                     }}
                   >
                     <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
@@ -521,7 +495,7 @@ export function TransactionsPage() {
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700 text-white">
                       <SelectItem value="all">All categories</SelectItem>
-                      {pendingAvailableCategories.map((c) => (
+                      {availableCategories.map((c) => (
                         <SelectItem key={c.id} value={c.id.toString()}>
                           {c.name}
                         </SelectItem>
@@ -529,24 +503,24 @@ export function TransactionsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {pendingFilters.category_id && (
+                {filters.category_id && (
                   <div className="space-y-2">
                     <Label>Subcategory</Label>
                     <Select
-                      value={pendingFilters.subcategory_id ? pendingFilters.subcategory_id.toString() : "all"}
-                      onValueChange={(v) => setPendingFilters({ ...pendingFilters, subcategory_id: v === "all" ? "" : Number(v) })}
+                      value={filters.subcategory_id ? filters.subcategory_id.toString() : "all"}
+                      onValueChange={(v) => setFilters({ ...filters, subcategory_id: v === "all" ? "" : Number(v) })}
                     >
                       <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                         <SelectValue placeholder="All subcategories" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-white">
-                        <SelectItem value="all">All subcategories</SelectItem>
-                        {Array.isArray(subcategories) ? subcategories.map((s) => (
-                          <SelectItem key={s.id} value={s.id.toString()}>
-                            {s.name}
-                          </SelectItem>
-                        )) : null}
-                      </SelectContent>
+                    <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                      <SelectItem value="all">All subcategories</SelectItem>
+                      {Array.isArray(subcategories) ? subcategories.map((s) => (
+                        <SelectItem key={s.id} value={s.id.toString()}>
+                          {s.name}
+                        </SelectItem>
+                      )) : null}
+                    </SelectContent>
                     </Select>
                   </div>
                 )}
@@ -554,8 +528,8 @@ export function TransactionsPage() {
                   <Label>Date From</Label>
                   <Input
                     type="date"
-                    value={pendingFilters.date_from}
-                    onChange={(e) => setPendingFilters({ ...pendingFilters, date_from: e.target.value })}
+                    value={filters.date_from}
+                    onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}
                     className="bg-slate-800 border-slate-600 text-white"
                   />
                 </div>
@@ -563,17 +537,11 @@ export function TransactionsPage() {
                   <Label>Date To</Label>
                   <Input
                     type="date"
-                    value={pendingFilters.date_to}
-                    onChange={(e) => setPendingFilters({ ...pendingFilters, date_to: e.target.value })}
+                    value={filters.date_to}
+                    onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}
                     className="bg-slate-800 border-slate-600 text-white"
                   />
                 </div>
-                <Button
-                  onClick={handleApplyFilters}
-                  className="w-full bg-primary text-primary-foreground"
-                >
-                  Apply Filter
-                </Button>
                 <Button
                   variant="outline"
                   onClick={handleClearFilters}

@@ -5,6 +5,10 @@ import type {
   Category,
   Subcategory,
   Transaction,
+  LedgerEntry,
+  LedgerStatementResponse,
+  LedgerClosureStatus,
+  LedgerClosureRow,
   Loan,
   LoanPayment,
   LoanDisbursement,
@@ -27,7 +31,18 @@ export const authApi = {
   },
   me: async (): Promise<User> => {
     const { data } = await apiClient.get("/me");
-    return data;
+    // Laravel wraps the authenticated user under `user` (see AuthController::me).
+    if (data && typeof data === "object" && "user" in data && data.user) {
+      return data.user as User;
+    }
+    return data as User;
+  },
+  updateProfile: async (body: { phone?: string | null }): Promise<User> => {
+    const { data } = await apiClient.put("/me/profile", body);
+    if (data && typeof data === "object" && "user" in data && data.user) {
+      return data.user as User;
+    }
+    return data as User;
   },
 };
 
@@ -218,6 +233,164 @@ export const transactionsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/transactions/${id}`);
+  },
+};
+
+// Ledgers (cash/bank) with approval
+export const ledgersApi = {
+  summary: async (
+    date?: string
+  ): Promise<{
+    date: string;
+    cash_balance: number;
+    bank_balance: number;
+    cash_balance_realtime: number;
+    bank_balance_realtime: number;
+    total_balance_approved: number;
+    total_balance_realtime: number;
+    pending_count: number;
+  }> => {
+    const { data } = await apiClient.get("/ledgers/summary", { params: { date } });
+    return data;
+  },
+  list: async (params?: {
+    ledger?: "cash" | "bank";
+    status?: "pending" | "approved";
+    date_from?: string;
+    date_to?: string;
+    sort?: "asc" | "desc";
+  }): Promise<LedgerEntry[]> => {
+    const { data } = await apiClient.get("/ledgers", { params });
+    return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+  },
+  statement: async (params: {
+    ledger: "cash" | "bank";
+    date_from: string;
+    date_to: string;
+    include_pending?: boolean;
+  }): Promise<LedgerStatementResponse> => {
+    const { data } = await apiClient.get("/ledgers/statement", {
+      params: {
+        ledger: params.ledger,
+        date_from: params.date_from,
+        date_to: params.date_to,
+        ...(params.include_pending ? { include_pending: 1 } : {}),
+      },
+    });
+    return data;
+  },
+
+  downloadStatementCsv: async (params: {
+    ledger: "cash" | "bank";
+    date_from: string;
+    date_to: string;
+    include_pending?: boolean;
+  }): Promise<void> => {
+    const res = await apiClient.get("/ledgers/statement/export/csv", {
+      params: {
+        ledger: params.ledger,
+        date_from: params.date_from,
+        date_to: params.date_to,
+        ...(params.include_pending ? { include_pending: 1 } : {}),
+      },
+      responseType: "blob",
+    });
+    const blob = new Blob([res.data], { type: "text/csv;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ledger-statement-${params.ledger}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadStatementPdf: async (params: {
+    ledger: "cash" | "bank";
+    date_from: string;
+    date_to: string;
+    include_pending?: boolean;
+  }): Promise<void> => {
+    const res = await apiClient.get("/ledgers/statement/export/pdf", {
+      params: {
+        ledger: params.ledger,
+        date_from: params.date_from,
+        date_to: params.date_to,
+        ...(params.include_pending ? { include_pending: 1 } : {}),
+      },
+      responseType: "blob",
+    });
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ledger-statement-${params.ledger}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
+
+  closureStatus: async (): Promise<LedgerClosureStatus> => {
+    const { data } = await apiClient.get("/ledgers/closure-status");
+    return data;
+  },
+
+  closuresList: async (): Promise<LedgerClosureRow[]> => {
+    const { data } = await apiClient.get("/ledgers/closures");
+    return Array.isArray(data?.data) ? data.data : [];
+  },
+
+  closeCreate: async (body: { closed_through_date: string; notes?: string }): Promise<{ id: number }> => {
+    const { data } = await apiClient.post("/ledgers/closures", body);
+    return data?.data ?? data;
+  },
+
+  closeDelete: async (id: number): Promise<void> => {
+    await apiClient.delete(`/ledgers/closures/${id}`);
+  },
+  create: async (body: {
+    entry_date: string;
+    ledger: "cash" | "bank";
+    direction: "received" | "paid";
+    amount: number;
+    particulars: string;
+    note: string;
+  }): Promise<LedgerEntry> => {
+    const { data } = await apiClient.post("/ledgers", body);
+    return data?.data ?? data;
+  },
+  importCsv: async (file: File): Promise<{ imported: number; message?: string }> => {
+    const form = new FormData();
+    form.append("file", file);
+    const { data } = await apiClient.post("/ledgers/import-csv", form);
+    return data;
+  },
+  update: async (
+    id: number,
+    body: {
+      entry_date: string;
+      ledger: "cash" | "bank";
+      direction: "received" | "paid";
+      amount: number;
+      particulars: string;
+      note: string;
+    }
+  ): Promise<LedgerEntry> => {
+    const { data } = await apiClient.put(`/ledgers/${id}`, body);
+    return data?.data ?? data;
+  },
+  deleteEntry: async (id: number): Promise<void> => {
+    await apiClient.delete(`/ledgers/${id}`);
+  },
+  sendApprovalOtp: async (): Promise<{ message: string; expires_in: number }> => {
+    const { data } = await apiClient.post("/ledgers/approval-otp/send");
+    return data;
+  },
+  approve: async (id: number, otp?: string): Promise<LedgerEntry> => {
+    const { data } = await apiClient.post(`/ledgers/${id}/approve`, otp ? { otp } : {});
+    return data?.data ?? data;
+  },
+  approveBulk: async (ids: number[], otp?: string): Promise<{ approved: number; data: LedgerEntry[] }> => {
+    const { data } = await apiClient.post("/ledgers/approve-bulk", { ids, ...(otp ? { otp } : {}) });
+    return data;
   },
 };
 

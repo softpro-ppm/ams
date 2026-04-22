@@ -148,7 +148,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(data.quarterly_income)}</div>
-            <p className="text-xs mt-1 text-slate-400">Full calendar quarter</p>
+            <p className="text-xs mt-1 text-slate-400">Current quarter</p>
           </CardContent>
         </Card>
 
@@ -161,7 +161,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(data.quarterly_expense)}</div>
-            <p className="text-xs mt-1 text-slate-400">Full calendar quarter</p>
+            <p className="text-xs mt-1 text-slate-400">Current quarter</p>
           </CardContent>
         </Card>
 
@@ -176,7 +176,7 @@ export function DashboardPage() {
             <div className={cn("text-2xl font-bold", (data.quarterly_net_balance ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400")}>
               {formatCurrency(data.quarterly_net_balance)}
             </div>
-            <p className="text-xs mt-1 text-slate-400">Full calendar quarter</p>
+            <p className="text-xs mt-1 text-slate-400">Current quarter</p>
           </CardContent>
         </Card>
 
